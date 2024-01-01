@@ -85,13 +85,18 @@ class Laravel implements ContainerInterface
     private $app;
 
     /**
+     * @var string
+     */
+    public static array $config;
+
+    /**
      * @var bool
      */
     private $bootstrapped = false;
 
     public function __construct()
     {
-        $this->app = new App(FCPATH);
+        $this->app = new App(self::$config['basePath']);
     }
 
     public function __call($method, $arguments)
@@ -112,8 +117,12 @@ class Laravel implements ContainerInterface
         });
 
         $this->app->singleton('config', Fluent::class);
-        
+
         $this->app->singleton('files', Filesystem::class);
+
+        $this->app->singleton('filesystem', function () {
+            return new \Illuminate\Filesystem\FilesystemManager($this->app);
+        });
 
         $this->app->singleton('cache', function () {
             return new CacheManager($this->app);
@@ -245,6 +254,56 @@ class Laravel implements ContainerInterface
         }
 
         return static::$instance;
+    }
+
+    /**
+     * @return static
+     */
+    public static function run(array $config = [])
+    {
+        if ($config) {
+            static::$config = $config;
+        }
+
+        $instance = static::getInstance()->setupConfig();
+
+        if ($config['database']) {
+            $instance->setupDatabase($config['database']);
+        }
+
+        // if ($config['cache']) {
+        //     $default = $config['cache']['default'];
+        //     $file    = $config['cache']['stores']['file']['path'];
+
+        //     $instance->setupCache($default, $file);
+        // }
+
+        // if ($config['encryption']) {
+        //     $key    = $config['encryption']['key'];
+        //     $cipher = $config['encryption']['cipher'];
+
+        //     $instance->setupEncryption($key, $cipher);
+        // }
+
+        // if ($config['view']) {
+        //     $paths    = $config['view']['paths'];
+        //     $compiled = $config['view']['compiled'];
+
+        //     $instance->setupView($paths, $compiled);
+        // }
+
+        // if ($config['session']) {
+        //     $lottery = $config['session']['lottery'];
+        //     $cookie  = $config['session']['cookie'];
+        //     $path    = $config['session']['path'];
+        //     $domain  = $config['session']['domain'];
+        //     $driver  = $config['session']['driver'];
+        //     $files   = $config['session']['files'];
+
+        //     $instance->setupSession($lottery, $cookie, $path, $domain, $driver, $files);
+        // }
+
+        return $instance;
     }
 
     /**

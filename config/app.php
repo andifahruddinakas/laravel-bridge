@@ -18,7 +18,7 @@ return [
     */
 
     // 'name' => env('APP_NAME', 'Laravel'),
-    'name' => 'CodeIgniter 3 + Laravel Bridge',
+    'name' => 'Laravel Bridge',
 
     /*
     |--------------------------------------------------------------------------

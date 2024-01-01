@@ -41,19 +41,34 @@ trait SetupLaravel
     public function setupConfig()
     {
         $configPath = $this->app->configPath();
-        
-        $config = new Repository([
-            'app'   => require $configPath . '/app.php',
-            'cache' => require $configPath . '/cache.php',
-            'session' => require $configPath . '/session.php',
-            'view'  => require $configPath . '/view.php',
-        ]);
+        $configs    = [];
+        $files      = scandir($configPath);
+
+        foreach ($files as $file) {
+            if (preg_match('/\.php$/', $file) === 1) {
+                $configs[basename($file, '.php')] = require $configPath . '/' . $file;
+            }
+        }
+
+        $config = new Repository($configs);
 
         $this->app->instance('config', $config);
-        
-        $this->setupEncryption($config['app.key'], $config['app.cipher']);
-        $this->setupView($config['view.paths'], $config['view.compiled']);
-        $this->setupCache($config['cache.default'], $config['cache.stores.file']);
+
+        $this->setupCache(
+            $config['cache.default'],
+            $config['cache.stores.file.path']
+        );
+
+        $this->setupEncryption(
+            $config['app.key'],
+            $config['app.cipher']
+        );
+
+        $this->setupView(
+            $config['view.paths'],
+            $config['view.compiled']
+        );
+
         $this->setupSession(
             $config['session.lottery'],
             $config['session.cookie'],
@@ -62,8 +77,6 @@ trait SetupLaravel
             $config['session.driver'],
             $config['session.files']
         );
-
-
 
         return $this;
     }
@@ -141,7 +154,7 @@ trait SetupLaravel
     /**
      * @param string $key
      * @param string $cipher
-     * 
+     *
      * @return static
      */
     public function setupEncryption($key, $cipher = 'AES-128-CBC')
@@ -156,7 +169,7 @@ trait SetupLaravel
 
     /**
      * @param string $default
-     * 
+     *
      * @return static
      */
     public function setupCache($default, $file)
@@ -171,7 +184,7 @@ trait SetupLaravel
 
     /**
      * @param string $default
-     * 
+     *
      * @return static
      */
     public function setupSession($lottery, $cookie, $path, $domain, $driver, $files)
