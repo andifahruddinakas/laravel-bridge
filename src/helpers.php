@@ -13,12 +13,8 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Contracts\Validation\Factory as ValidationFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
-use Illuminate\Foundation\Bus\PendingClosureDispatch;
-use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Foundation\Mix;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Queue\CallQueuedClosure;
-use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\HtmlString;
 use Symfony\Component\HttpFoundation\Response;
@@ -379,20 +375,20 @@ if (!function_exists('database_path')) {
     }
 }
 
-if (!function_exists('dispatch')) {
-    /**
-     * Dispatch a job to its appropriate handler.
-     *
-     * @param  mixed  $job
-     * @return \Illuminate\Foundation\Bus\PendingDispatch
-     */
-    function dispatch($job)
-    {
-        return $job instanceof Closure
-                ? new PendingClosureDispatch(CallQueuedClosure::create($job))
-                : new PendingDispatch($job);
-    }
-}
+// if (!function_exists('dispatch')) {
+//     /**
+//      * Dispatch a job to its appropriate handler.
+//      *
+//      * @param  mixed  $job
+//      * @return \Illuminate\Foundation\Bus\PendingDispatch
+//      */
+//     function dispatch($job)
+//     {
+//         return $job instanceof Closure
+//                 ? new PendingClosureDispatch(CallQueuedClosure::create($job))
+//                 : new PendingDispatch($job);
+//     }
+// }
 
 if (!function_exists('dispatch_sync')) {
     /**
@@ -427,30 +423,30 @@ if (!function_exists('event')) {
     }
 }
 
-if (!function_exists('fake') && class_exists(\Faker\Factory::class)) {
-    /**
-     * Get a faker instance.
-     *
-     * @param  string|null  $locale
-     * @return \Faker\Generator
-     */
-    function fake($locale = null)
-    {
-        if (app()->bound('config')) {
-            $locale ??= app('config')->get('app.faker_locale');
-        }
+// if (!function_exists('fake') && class_exists(\Faker\Factory::class)) {
+//     /**
+//      * Get a faker instance.
+//      *
+//      * @param  string|null  $locale
+//      * @return \Faker\Generator
+//      */
+//     function fake($locale = null)
+//     {
+//         if (app()->bound('config')) {
+//             $locale ??= app('config')->get('app.faker_locale');
+//         }
 
-        $locale ??= 'en_US';
+//         $locale ??= 'en_US';
 
-        $abstract = \Faker\Generator::class . ':' . $locale;
+//         $abstract = \Faker\Generator::class . ':' . $locale;
 
-        if (!app()->bound($abstract)) {
-            app()->singleton($abstract, fn() => \Faker\Factory::create($locale));
-        }
+//         if (!app()->bound($abstract)) {
+//             app()->singleton($abstract, fn() => \Faker\Factory::create($locale));
+//         }
 
-        return app()->make($abstract);
-    }
-}
+//         return app()->make($abstract);
+//     }
+// }
 
 if (!function_exists('info')) {
     /**

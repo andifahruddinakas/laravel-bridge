@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Facade;
 use Akas\LaravelBridge\Concerns\SetupLaravel;
 use Illuminate\Container\Container as LaravelContainer;
 use Akas\LaravelBridge\Exceptions\EntryNotFoundException;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @mixin LaravelContainer
@@ -36,47 +35,7 @@ class Laravel implements ContainerInterface
      * @var array
      */
     public $aliases = [
-        // 'App' => App::class,
-        // 'Arr' => Arr::class,
-        // 'Artisan' => Artisan::class,
-        // 'Auth' => Auth::class,
-        // 'Blade' => Blade::class,
-        // 'Broadcast' => Broadcast::class,
-        // 'Bus' => Bus::class,
-        // 'Cache' => Cache::class,
-        // 'Config' => Config::class,
-        // 'Cookie' => Cookie::class,
-        // 'Crypt' => Crypt::class,
-        // 'Date' => Date::class,
-        // 'DB' => DB::class,
-        // 'Eloquent' => Model::class,
-        // 'Event' => Event::class,
-        // 'File' => File::class,
-        // 'Gate' => Gate::class,
-        // 'Hash' => Hash::class,
-        // 'Http' => Http::class,
-        // 'Js' => Js::class,
-        // 'Lang' => Lang::class,
-        // 'Log' => Log::class,
-        // 'Mail' => Mail::class,
-        // 'Notification' => Notification::class,
-        // 'Number' => Number::class,
-        // 'Password' => Password::class,
-        // 'Process' => Process::class,
-        // 'Queue' => Queue::class,
-        // 'RateLimiter' => RateLimiter::class,
-        // 'Redirect' => Redirect::class,
-        // 'Request' => Request::class,
-        // 'Response' => Response::class,
-        // 'Route' => Route::class,
-        // 'Schema' => Schema::class,
-        // 'Session' => Session::class,
-        // 'Storage' => Storage::class,
-        // 'Str' => Str::class,
-        // 'URL' => URL::class,
-        // 'Validator' => Validator::class,
         'View' => View::class,
-        // 'Vite' => Vite::class,
     ];
 
     /**
@@ -85,13 +44,18 @@ class Laravel implements ContainerInterface
     private $app;
 
     /**
+     * @var string
+     */
+    public static array $config;
+
+    /**
      * @var bool
      */
     private $bootstrapped = false;
 
     public function __construct()
     {
-        $this->app = new App(FCPATH);
+        $this->app = new App(self::$config['basePath']);
     }
 
     public function __call($method, $arguments)
@@ -112,8 +76,12 @@ class Laravel implements ContainerInterface
         });
 
         $this->app->singleton('config', Fluent::class);
-        
+
         $this->app->singleton('files', Filesystem::class);
+
+        $this->app->singleton('filesystem', function () {
+            return new \Illuminate\Filesystem\FilesystemManager($this->app);
+        });
 
         $this->app->singleton('cache', function () {
             return new CacheManager($this->app);
@@ -245,6 +213,24 @@ class Laravel implements ContainerInterface
         }
 
         return static::$instance;
+    }
+
+    /**
+     * @return static
+     */
+    public static function run(array $config = [])
+    {
+        if ($config) {
+            static::$config = $config;
+        }
+
+        $instance = static::getInstance()->setupConfig();
+
+        if ($config['database']) {
+            $instance->setupDatabase($config['database']);
+        }
+
+        return $instance;
     }
 
     /**

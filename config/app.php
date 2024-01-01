@@ -17,8 +17,7 @@ return [
     |
     */
 
-    // 'name' => env('APP_NAME', 'Laravel'),
-    'name' => 'CodeIgniter 3 + Laravel Bridge',
+    'name' => 'Laravel Bridge',
 
     /*
     |--------------------------------------------------------------------------
@@ -31,7 +30,6 @@ return [
     |
     */
 
-    // 'env' => env('APP_ENV', 'production'),
     'env' => 'production',
 
     /*
@@ -45,7 +43,6 @@ return [
     |
     */
 
-    // 'debug' => (bool) env('APP_DEBUG', false),
     'debug' => (bool) false,
 
     /*
@@ -59,10 +56,8 @@ return [
     |
     */
 
-    // 'url' => env('APP_URL', 'http://localhost'),
     'url' => 'http://localhost',
 
-    // 'asset_url' => env('ASSET_URL'),
     'asset_url' => 'http://localhost/assets',
 
     /*
@@ -128,7 +123,6 @@ return [
     |
     */
 
-    // 'key' => env('APP_KEY'),
     'key' => Encrypter::generateKey('AES-256-CBC'),
 
     'cipher' => 'AES-256-CBC',
