@@ -3,7 +3,7 @@
 namespace Tests\Laravel55;
 
 use Illuminate\Support\Facades\View;
-use Recca0120\LaravelBridge\Laravel;
+use Akas\LaravelBridge\Laravel;
 use Tests\TestCase;
 
 class TranslatorTest extends TestCase

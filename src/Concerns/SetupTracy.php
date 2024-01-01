@@ -1,6 +1,6 @@
 <?php
 
-namespace Recca0120\LaravelBridge\Concerns;
+namespace Akas\LaravelBridge\Concerns;
 
 use Illuminate\Database\Events\QueryExecuted;
 use Recca0120\LaravelTracy\Tracy;

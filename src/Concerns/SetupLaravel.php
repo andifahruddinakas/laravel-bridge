@@ -1,52 +1,21 @@
 <?php
 
-namespace Recca0120\LaravelBridge\Concerns;
+namespace Akas\LaravelBridge\Concerns;
 
 use PDO;
+use Illuminate\Config\Repository;
 use Illuminate\View\ViewServiceProvider;
+use Illuminate\Cache\CacheServiceProvider;
+use Illuminate\Session\SessionServiceProvider;
 use Illuminate\Database\DatabaseServiceProvider;
+use Illuminate\Encryption\EncryptionServiceProvider;
 use Illuminate\Pagination\PaginationServiceProvider;
 use Illuminate\Translation\TranslationServiceProvider;
 
 trait SetupLaravel
 {
     /**
-     * Setup all LaravelProvider.
-     */
-    public function setupLaravelProviders()
-    {
-        collect([
-            'Illuminate\Auth\AuthServiceProvider',
-            'Illuminate\Broadcasting\BroadcastServiceProvider',
-            'Illuminate\Bus\BusServiceProvider',
-            'Illuminate\Cache\CacheServiceProvider',
-            'Illuminate\Foundation\Providers\ConsoleSupportServiceProvider',
-            'Illuminate\Cookie\CookieServiceProvider',
-            'Illuminate\Database\DatabaseServiceProvider',
-            'Illuminate\Encryption\EncryptionServiceProvider',
-            'Illuminate\Filesystem\FilesystemServiceProvider',
-            'Illuminate\Foundation\Providers\FoundationServiceProvider',
-            'Illuminate\Hashing\HashServiceProvider',
-            'Illuminate\Mail\MailServiceProvider',
-            'Illuminate\Notifications\NotificationServiceProvider',
-            'Illuminate\Pagination\PaginationServiceProvider',
-            'Illuminate\Pipeline\PipelineServiceProvider',
-            'Illuminate\Queue\QueueServiceProvider',
-            'Illuminate\Redis\RedisServiceProvider',
-            'Illuminate\Auth\Passwords\PasswordResetServiceProvider',
-            'Illuminate\Session\SessionServiceProvider',
-            'Illuminate\Translation\TranslationServiceProvider',
-            'Illuminate\Validation\ValidationServiceProvider',
-            'Illuminate\View\ViewServiceProvider',
-        ])->filter(function ($provider) {
-            return class_exists($provider);
-        })->each(function ($provider) {
-            $this->app->register($provider);
-        });
-    }
-
-    /**
-     * setup user define provider.
+     * setup user define provider
      *
      * @param callable $callable The callable can return the instance of ServiceProvider
      *
@@ -65,6 +34,41 @@ trait SetupLaravel
     }
 
     /**
+     * @param string $configPath
+     *
+     * @return static
+     */
+    public function setupConfig()
+    {
+        $configPath = $this->app->configPath();
+        
+        $config = new Repository([
+            'app'   => require $configPath . '/app.php',
+            'cache' => require $configPath . '/cache.php',
+            'session' => require $configPath . '/session.php',
+            'view'  => require $configPath . '/view.php',
+        ]);
+
+        $this->app->instance('config', $config);
+        
+        $this->setupEncryption($config['app.key'], $config['app.cipher']);
+        $this->setupView($config['view.paths'], $config['view.compiled']);
+        $this->setupCache($config['cache.default'], $config['cache.stores.file']);
+        $this->setupSession(
+            $config['session.lottery'],
+            $config['session.cookie'],
+            $config['session.path'],
+            $config['session.domain'],
+            $config['session.driver'],
+            $config['session.files']
+        );
+
+
+
+        return $this;
+    }
+
+    /**
      * @param array $connections
      * @param string $default
      * @param int $fetch
@@ -73,11 +77,13 @@ trait SetupLaravel
      */
     public function setupDatabase(array $connections, $default = 'default', $fetch = PDO::FETCH_CLASS)
     {
-        $this->app['config']['database.connections'] = $connections;
-        $this->app['config']['database.default'] = $default;
-        $this->app['config']['database.fetch'] = $fetch;
+        return $this->setupCallableProvider(function ($app) use ($connections, $default, $fetch) {
+            $app['config']['database.connections'] = $connections;
+            $app['config']['database.default'] = $default;
+            $app['config']['database.fetch'] = $fetch;
 
-        return $this->bootProvider(DatabaseServiceProvider::class);
+            return new DatabaseServiceProvider($app);
+        });
     }
 
     /**
@@ -97,12 +103,9 @@ trait SetupLaravel
      */
     public function setupPagination()
     {
-        if (! isset($this->app['path.lang'])) {
-            // default pagination view without translation
-            $this->app['view']->addNamespace('pagination', __DIR__.'/../../resources/views/pagination/');
-        }
-
-        return $this->bootProvider(PaginationServiceProvider::class);
+        return $this->setupCallableProvider(function ($app) {
+            return new PaginationServiceProvider($app);
+        });
     }
 
     /**
@@ -112,9 +115,11 @@ trait SetupLaravel
      */
     public function setupTranslator($langPath)
     {
-        $this->app->instance('path.lang', $langPath);
+        return $this->setupCallableProvider(function ($app) use ($langPath) {
+            $app->instance('path.lang', $langPath);
 
-        return $this->bootProvider(TranslationServiceProvider::class);
+            return new TranslationServiceProvider($app);
+        });
     }
 
     /**
@@ -125,10 +130,62 @@ trait SetupLaravel
      */
     public function setupView($viewPath, $compiledPath)
     {
-        $this->app['config']['view.paths'] = is_array($viewPath) ? $viewPath : [$viewPath];
-        $this->app['config']['view.compiled'] = $compiledPath;
+        return $this->setupCallableProvider(function ($app) use ($viewPath, $compiledPath) {
+            $app['config']['view.paths'] = is_array($viewPath) ? $viewPath : [$viewPath];
+            $app['config']['view.compiled'] = $compiledPath;
 
-        return $this->bootProvider(ViewServiceProvider::class);
+            return new ViewServiceProvider($app);
+        });
+    }
+
+    /**
+     * @param string $key
+     * @param string $cipher
+     * 
+     * @return static
+     */
+    public function setupEncryption($key, $cipher = 'AES-128-CBC')
+    {
+        return $this->setupCallableProvider(function ($app) use ($key, $cipher) {
+            $app['config']['app.key'] = $key;
+            $app['config']['app.cipher'] = $cipher;
+
+            return new EncryptionServiceProvider($app);
+        });
+    }
+
+    /**
+     * @param string $default
+     * 
+     * @return static
+     */
+    public function setupCache($default, $file)
+    {
+        return $this->setupCallableProvider(function ($app) use ($default, $file) {
+            $app['config']['cache.default'] = $default;
+            $app['config']['cache.stores.file.path'] = $file;
+
+            return new CacheServiceProvider($app);
+        });
+    }
+
+    /**
+     * @param string $default
+     * 
+     * @return static
+     */
+    public function setupSession($lottery, $cookie, $path, $domain, $driver, $files)
+    {
+        return $this->setupCallableProvider(function ($app) use ($lottery, $cookie, $path, $domain, $driver, $files) {
+            $app['config']['session.lifetime'] = $lottery;
+            $app['config']['session.cookie'] = $cookie;
+            $app['config']['session.path'] = $path;
+            $app['config']['session.domain'] = $domain;
+            $app['config']['session.driver'] = $driver;
+            $app['config']['session.files'] = $files;
+
+            return new SessionServiceProvider($app);
+        });
     }
 
     /**

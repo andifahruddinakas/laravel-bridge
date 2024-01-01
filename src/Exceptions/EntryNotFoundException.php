@@ -1,6 +1,6 @@
 <?php
 
-namespace Recca0120\LaravelBridge\Exceptions;
+namespace Akas\LaravelBridge\Exceptions;
 
 use Exception;
 use Psr\Container\NotFoundExceptionInterface;

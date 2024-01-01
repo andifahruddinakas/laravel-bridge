@@ -4,7 +4,7 @@ namespace Tests;
 
 use Mockery;
 use PHPUnit\Framework\TestCase as BaseTestCase;
-use Recca0120\LaravelBridge\Laravel;
+use Akas\LaravelBridge\Laravel;
 
 class TestCase extends BaseTestCase
 {

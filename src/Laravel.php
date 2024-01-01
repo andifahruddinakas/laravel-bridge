@@ -1,20 +1,23 @@
 <?php
 
-namespace Recca0120\LaravelBridge;
+namespace Akas\LaravelBridge;
 
-use BadMethodCallException;
 use Exception;
-use Illuminate\Container\Container as LaravelContainer;
-use Illuminate\Events\Dispatcher;
-use Illuminate\Filesystem\Filesystem;
+use BadMethodCallException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Facade;
-use Illuminate\Support\Facades\View;
+use Illuminate\Log\LogManager;
 use Illuminate\Support\Fluent;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Cache\CacheManager;
+use Illuminate\Encryption\Encrypter;
+use Illuminate\Support\Facades\View;
+use Illuminate\Filesystem\Filesystem;
 use Psr\Container\ContainerInterface;
-use Recca0120\LaravelBridge\Concerns\SetupLaravel;
-use Recca0120\LaravelBridge\Concerns\SetupTracy;
-use Recca0120\LaravelBridge\Exceptions\EntryNotFoundException;
+use Illuminate\Support\Facades\Facade;
+use Akas\LaravelBridge\Concerns\SetupLaravel;
+use Illuminate\Container\Container as LaravelContainer;
+use Akas\LaravelBridge\Exceptions\EntryNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @mixin LaravelContainer
@@ -22,7 +25,7 @@ use Recca0120\LaravelBridge\Exceptions\EntryNotFoundException;
 class Laravel implements ContainerInterface
 {
     use SetupLaravel;
-    use SetupTracy;
+    // use SetupTracy;
 
     /**
      * @var static
@@ -33,7 +36,47 @@ class Laravel implements ContainerInterface
      * @var array
      */
     public $aliases = [
+        // 'App' => App::class,
+        // 'Arr' => Arr::class,
+        // 'Artisan' => Artisan::class,
+        // 'Auth' => Auth::class,
+        // 'Blade' => Blade::class,
+        // 'Broadcast' => Broadcast::class,
+        // 'Bus' => Bus::class,
+        // 'Cache' => Cache::class,
+        // 'Config' => Config::class,
+        // 'Cookie' => Cookie::class,
+        // 'Crypt' => Crypt::class,
+        // 'Date' => Date::class,
+        // 'DB' => DB::class,
+        // 'Eloquent' => Model::class,
+        // 'Event' => Event::class,
+        // 'File' => File::class,
+        // 'Gate' => Gate::class,
+        // 'Hash' => Hash::class,
+        // 'Http' => Http::class,
+        // 'Js' => Js::class,
+        // 'Lang' => Lang::class,
+        // 'Log' => Log::class,
+        // 'Mail' => Mail::class,
+        // 'Notification' => Notification::class,
+        // 'Number' => Number::class,
+        // 'Password' => Password::class,
+        // 'Process' => Process::class,
+        // 'Queue' => Queue::class,
+        // 'RateLimiter' => RateLimiter::class,
+        // 'Redirect' => Redirect::class,
+        // 'Request' => Request::class,
+        // 'Response' => Response::class,
+        // 'Route' => Route::class,
+        // 'Schema' => Schema::class,
+        // 'Session' => Session::class,
+        // 'Storage' => Storage::class,
+        // 'Str' => Str::class,
+        // 'URL' => URL::class,
+        // 'Validator' => Validator::class,
         'View' => View::class,
+        // 'Vite' => Vite::class,
     ];
 
     /**
@@ -48,7 +91,7 @@ class Laravel implements ContainerInterface
 
     public function __construct()
     {
-        $this->app = new App();
+        $this->app = new App(FCPATH);
     }
 
     public function __call($method, $arguments)
@@ -60,15 +103,8 @@ class Laravel implements ContainerInterface
         throw new BadMethodCallException("Undefined method '$method'");
     }
 
-    /**
-     * @return static
-     */
     public function bootstrap()
     {
-        if ($this->bootstrapped) {
-            return $this;
-        }
-
         $this->bootstrapped = true;
 
         $this->app->singleton('request', function () {
@@ -76,12 +112,35 @@ class Laravel implements ContainerInterface
         });
 
         $this->app->singleton('config', Fluent::class);
-        $this->app->singleton('events', Dispatcher::class);
+        
         $this->app->singleton('files', Filesystem::class);
 
-        Facade::setFacadeApplication($this->app);
+        $this->app->singleton('cache', function () {
+            return new CacheManager($this->app);
+        });
 
-        $this->setupLaravelProviders();
+        $this->app->singleton('events', Dispatcher::class);
+
+        $this->app->singleton('encrypter', function () {
+            return new Encrypter($this->app->config['app.key'], $this->app->config['app.cipher']);
+        });
+
+        $this->app->singleton('log', function () {
+            $log = new LogManager($this->app);
+            $log->driver()->getLogger()->pushHandler(new \Monolog\Handler\StreamHandler(storage_path('logs/laravel.log'), \Monolog\Logger::DEBUG));
+
+            return $log;
+        });
+
+        $this->app->singleton('session', function () {
+            $session = new \Illuminate\Session\SessionManager($this->app);
+            $session->driver('file')->start();
+
+            return $session;
+        });
+
+
+        Facade::setFacadeApplication($this->app);
 
         foreach ($this->aliases as $alias => $class) {
             if (!class_exists($alias)) {
@@ -170,15 +229,6 @@ class Laravel implements ContainerInterface
         $this->app['runningInConsole'] = $is;
 
         return $this;
-    }
-
-    /**
-     * @return static
-     * @deprecated use getInstance()
-     */
-    public static function instance()
-    {
-        return static::getInstance();
     }
 
     /**

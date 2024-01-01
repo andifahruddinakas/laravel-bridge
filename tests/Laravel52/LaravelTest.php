@@ -5,7 +5,7 @@ namespace Tests\Laravel52;
 use Illuminate\Support\Collection;
 use Illuminate\View\Factory as ViewFactory;
 use Illuminate\View\ViewServiceProvider;
-use Recca0120\LaravelBridge\Laravel;
+use Akas\LaravelBridge\Laravel;
 use Tests\TestCase;
 
 class LaravelTest extends TestCase
